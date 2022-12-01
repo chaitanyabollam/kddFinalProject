@@ -1,0 +1,97 @@
+---
+title: "Preprocessing"
+output: word_document
+date: "2022-11-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("readxl")
+tf<-read_excel("cardekho.xlsx")
+tf
+```
+```{r}
+head(tf)
+```
+Drop NA values from the dataset
+
+```{r}
+library(tidyr)
+cl<-drop_na(tf)
+cl$seller_type <- as.integer(as.factor(cl$seller_type))
+str(cl)
+```
+
+
+```{r}
+cl$fuel <- as.integer(as.factor(cl$fuel))
+cl$owner <- as.integer(as.factor(cl$owner))
+cl$transmission <- as.integer(as.factor(cl$transmission))
+str(cl)
+```
+
+```{r}
+summary(cl)
+dim(cl)
+```
+```{r}
+cl$age=2022-cl$year
+head(cl)
+```
+Splitting the dataset
+```{r}
+set.seed(1)
+cl$ID<-1:nrow(cl)
+train=cl %>% dplyr::sample_frac(0.90)
+test=dplyr::anti_join(cl,train,by='ID')
+```
+```{r}
+dim(test)
+dim(train)
+```
+```{r}
+colnames(cl)
+summary(cl)
+```
+Loading the Library
+```{r}
+install.packages("neuralnet")
+```
+Train the model
+```{r}
+library(neuralnet)
+ann=neuralnet(selling_price~age+fuel+transmission+seller_type+owner+km_driven,algorithm="rprop+",data=train,hidden=8,err.fc='sse',linear.output=FALSE,stepmax=10000)
+```
+
+```{r}
+plot(ann,rep=1)
+```
+
+```{r}
+train
+dim(train)
+```
+```{r}
+dr<-c("selling_price")
+test1=test[,!(names(test) %in% dr)]
+test1
+dim(test)
+```
+
+
+
+Prediction on the test data
+```{r}
+out=compute(ann,rep=1,test1)
+p=out$net.result
+```
+
+```{r}
+
+sp<-test$selling_price
+cm<-table(p,sp)
+cm
+```
